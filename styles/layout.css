@@ -1,0 +1,77 @@
+/* Main Console Container */
+.console-container {
+    position: relative;
+    z-index: 1;
+    width: calc(100vw - 8px);
+    max-width: 450px;
+    /* Limit size on larger screens */
+    height: 95vh;
+    /* 95% of screen height on mobile */
+    max-height: 900px;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Console Body */
+.console-body {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 2 / 3.2;
+    /* Classic handheld proportions */
+    background: var(--console-bg);
+    border-radius: 20px 20px 40px 40px;
+    border: 2px solid #4a4a4a;
+    /* Back to solid dark grey border */
+    box-shadow:
+        30px 40px 60px rgba(0, 0, 0, 0.5),
+        /* Doppelt so starker Schatten für extremen 3D Effekt */
+        inset -16px 0 25px rgba(0, 0, 0, 0.2),
+        /* Verstärkte Tiefe am rechten Rand */
+        inset 0 0 20px rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Interne Kabel/Platinen Effekt - ENTFERNT */
+.console-body::before {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .console-container {
+        width: 450px;
+        height: 800px;
+    }
+}
+
+.glass-panel {
+    backdrop-filter: blur(90px);
+    -webkit-backdrop-filter: blur(90px);
+}
+
+/* Branding & Middle Section */
+.middle-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* Vertically center items */
+    margin-bottom: 20px;
+    padding: 0 10px;
+    /* Equal margin from sides */
+}
+
+.brand-name {
+    font-family: 'Press Start 2P', cursive;
+    font-style: italic;
+    color: var(--console-dark);
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.2);
+    margin-bottom: 0;
+    margin-left: 0;
+}

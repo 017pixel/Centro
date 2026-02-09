@@ -1,0 +1,263 @@
+/* Function Buttons (Start) */
+.function-buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-right: 16px;
+    /* 16px mehr nach links/innen geschoben */
+}
+
+.pill-btn-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 9px;
+    /* Um 4px vergrößert */
+    transform: rotate(0deg);
+    /* Straight button */
+}
+
+/* Controls Area */
+.controls-area {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 20px;
+    padding-top: 40px;
+    /* Push controls lower */
+    padding-bottom: 30px;
+}
+
+/* D-Pad */
+.d-pad-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.d-pad {
+    position: relative;
+    width: 138px;
+    height: 138px;
+}
+
+.d-btn {
+    position: absolute;
+    background: var(--console-dark);
+    border: none;
+    width: 33%;
+    height: 33%;
+    box-shadow:
+        0 4px 0 #5d8a66,
+        0 6px 5px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.1s ease;
+    cursor: pointer;
+}
+
+.d-btn:active {
+    transform: translateY(2px) scale(0.98);
+    box-shadow:
+        0 1px 0 #5d8a66,
+        0 2px 3px rgba(0, 0, 0, 0.15);
+}
+
+.d-btn.up {
+    top: 0;
+    left: 33%;
+    border-radius: 4px 4px 0 0;
+}
+
+/* Larger hitbox - extends upward and sides, not toward center */
+.d-btn.up::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    left: -25px;
+    right: -25px;
+    bottom: 0;
+}
+
+.d-btn.right {
+    top: 33%;
+    right: 0;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Larger hitbox - extends right and vertically, not toward center */
+.d-btn.right::before {
+    content: '';
+    position: absolute;
+    top: -25px;
+    left: 0;
+    right: -30px;
+    bottom: -25px;
+}
+
+.d-btn.down {
+    bottom: 0;
+    left: 33%;
+    border-radius: 0 0 4px 4px;
+}
+
+/* Larger hitbox - extends downward and sides, not toward center */
+.d-btn.down::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -25px;
+    right: -25px;
+    bottom: -30px;
+}
+
+.d-btn.left {
+    top: 33%;
+    left: 0;
+    border-radius: 4px 0 0 4px;
+}
+
+/* Larger hitbox - extends left and vertically, not toward center */
+.d-btn.left::before {
+    content: '';
+    position: absolute;
+    top: -25px;
+    left: -30px;
+    right: 0;
+    bottom: -25px;
+}
+
+.d-center {
+    position: absolute;
+    top: 33%;
+    left: 33%;
+    width: 34%;
+    height: 34%;
+    background: var(--console-dark);
+    z-index: 2;
+}
+
+.d-center::after {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 80%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+}
+
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: rotate(-15deg);
+    /* Slight angle like Gameboy */
+}
+
+.pill-btn {
+    width: 70px;
+    height: 18px;
+    background: var(--button-tertiary);
+    /* Gold/Rubber look */
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 3px 0 #b07d46;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    cursor: pointer;
+}
+
+.pill-btn:active {
+    transform: translateY(2px) scale(0.98);
+    box-shadow: 0 1px 0 #b07d46;
+}
+
+.label {
+    font-size: 8px;
+    color: var(--display-text);
+    letter-spacing: 1px;
+}
+
+.btn-group {
+    display: flex;
+    gap: 15px;
+}
+
+.retro-btn {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    border: none;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    color: var(--button-text);
+    box-shadow:
+        0 5px 0 var(--button-shadow),
+        0 8px 15px rgba(0, 0, 0, 0.25);
+    transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.1s ease;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform: rotate(15deg);
+    /* Buchstaben gerade rücken, da .action-buttons um -15deg gedreht ist */
+}
+
+.retro-btn:active {
+    transform: rotate(15deg) translateY(4px) scale(0.96);
+    box-shadow:
+        0 1px 0 var(--button-shadow),
+        0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.btn-a {
+    background: var(--button-primary);
+    margin-top: -15px;
+    position: relative;
+}
+
+/* A button hitbox - extends up, right, down but NOT left toward B button */
+.btn-a::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    bottom: -25px;
+    left: -5px;
+}
+
+.btn-b {
+    background: var(--button-primary);
+    margin-top: 15px;
+    position: relative;
+}
+
+/* B button hitbox - extends up, left, down but NOT right toward A button */
+.btn-b::before {
+    content: '';
+    position: absolute;
+    top: -25px;
+    right: -5px;
+    bottom: -30px;
+    left: -30px;
+}
+
+/* Speaker Grill */
+.speaker-grill {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    transform: rotate(-45deg);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    opacity: 0.4;
+}
+
+.grill-line {
+    width: 40px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+}

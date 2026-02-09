@@ -1,0 +1,345 @@
+/* Screen Section */
+.screen-container {
+    background: #9ca0a3;
+    /* Grey plastic bezel */
+    border-radius: 15px 15px 30px 5px;
+    padding: 10px 15px 25px 15px;
+    /* Unten vergrößert für Symmetrie */
+    box-shadow:
+        inset 0 2px 5px rgba(0, 0, 0, 0.2),
+        0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.screen-bezel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    padding: 0 5px;
+}
+
+.battery-led {
+    width: 8px;
+    height: 8px;
+    background-color: #ff3333;
+    border-radius: 50%;
+    box-shadow: 0 0 5px #ff3333;
+    opacity: 0.8;
+}
+
+.screen-text {
+    font-family: 'VT323', monospace;
+    font-size: 8px;
+    color: #333;
+    letter-spacing: 1px;
+}
+
+.lcd-display {
+    background: var(--display-bg);
+    border: 2px solid var(--display-border);
+    border-radius: 5px;
+    height: 250px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(to bottom,
+            transparent 0px,
+            transparent 2px,
+            rgba(0, 0, 0, 0.05) 2px,
+            rgba(0, 0, 0, 0.05) 4px);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.screen-content {
+    padding: 18px;
+    height: 100%;
+    color: var(--display-text);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    z-index: 5;
+}
+
+.screen-content.no-padding {
+    padding: 0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Intro Screen */
+.intro-screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.intro-text-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.logo-text,
+.press-start {
+    display: flex;
+    justify-content: center;
+}
+
+.logo-text span,
+.press-start span {
+    display: inline-block;
+    transition: transform 0.5s ease-in;
+}
+
+/* Animation class for falling letters */
+.falling {
+    animation: fallDown 3.5s forwards cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+@keyframes fallDown {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    80% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(300px);
+        opacity: 0;
+    }
+}
+
+.logo-text {
+    font-size: 22px;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+}
+
+.press-start {
+    font-size: 10px;
+}
+
+.blink {
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Menu Animations */
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.slide-down {
+    animation: slideDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.slide-in-right {
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Menu Screen */
+.menu-screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 10px 10px 0;
+}
+
+#settings-screen {
+    position: relative;
+}
+
+.menu-title {
+    font-size: 12px;
+    margin-bottom: 15px;
+    align-self: flex-start;
+    border-bottom: 2px solid var(--display-text);
+    padding-bottom: 5px;
+    padding-left: 3px;
+    width: 100%;
+    text-align: left;
+}
+
+.game-list,
+.menu-list,
+.content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 20px;
+    flex-grow: 1;
+}
+
+.game-list::-webkit-scrollbar,
+.menu-list::-webkit-scrollbar,
+.content-list::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.game-list,
+.menu-list,
+.content-list {
+    scrollbar-width: none;
+}
+
+.game-item {
+    font-size: 10px;
+    padding: 8px 15px 8px 3px;
+    border-left: 4px solid transparent;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-align: left;
+    flex-shrink: 0;
+    /* Prevent shrinking */
+}
+
+.game-item.active {
+    transform: translateX(20px);
+    color: #fff;
+    background: var(--display-text);
+    border-left-color: var(--button-primary);
+    box-shadow: 4px 0 0 rgba(0, 0, 0, 0.08);
+}
+
+/* Info Screen Styles */
+.info-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.info-box {
+    border: 2px dashed var(--display-text);
+    padding: 15px;
+    text-align: center;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.info-box .highlight {
+    color: var(--button-primary);
+    /* Pinkish accent */
+    font-weight: bold;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
+    margin-top: 5px;
+}
+
+.color-picker {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: var(--display-bg);
+    border-top: 2px solid var(--display-text);
+    padding: 10px 10px 10px 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    z-index: 30;
+    box-shadow: 0 -4px 0 rgba(0, 0, 0, 0.08);
+}
+
+.color-picker-title {
+    font-size: 10px;
+    width: 100%;
+    text-align: left;
+    padding-left: 3px;
+    margin-bottom: 10px;
+    border-bottom: 2px solid var(--display-text);
+    padding-bottom: 6px;
+}
+
+.color-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 10px;
+    flex-grow: 1;
+}
+
+.color-list::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.color-list {
+    scrollbar-width: none;
+}
+
+.color-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-swatch {
+    width: 12px;
+    height: 12px;
+    background: var(--swatch, #ccc);
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
+    flex: 0 0 auto;
+}

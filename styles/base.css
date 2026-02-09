@@ -1,0 +1,110 @@
+:root {
+    /* Konsole & Hintergrund */
+    --console-bg: rgba(224, 221, 209, 0.9);
+    /* Sandiges Grau/Beige mit minimaler Transparenz */
+    --console-accent: #ffffff;
+    --console-dark: #7bc99c;
+
+    /* LCD Display (Retro) */
+    --display-bg: #c3f0ca;
+    --display-text: #2d4a35;
+    --display-border: #5d8a66;
+    --display-alt: #8b9dc3;
+
+    /* Buttons */
+    --button-primary: #ffaaa5;
+    --button-secondary: #ffd3b6;
+    --button-tertiary: #dda15e;
+    --button-shadow: #d97a75;
+    --button-text: #4a3428;
+
+    /* Akzente */
+    --accent-pink: #f7b7d7;
+    --accent-yellow: #ffffcc;
+    --accent-purple: #c9a0dc;
+
+    /* Circuit Details */
+    --circuit-color: #5d8a66;
+
+    /* Page BG */
+    --page-bg: #C4BEBB;
+}
+
+/* Dark Mode Variables */
+[data-theme="dark"] {
+    --page-bg: #1a1a1a;
+    --console-bg: rgba(44, 44, 44, 0.85);
+    /* Dark Grey with slight transparency */
+    --console-accent: #4a4a4a;
+
+    /* Buttons and D-Pad stay GREEN (original colors) */
+    --console-dark: #7bc99c;
+
+    /* Display stays green */
+    --display-bg: #c3f0ca;
+    --display-text: #2d4a35;
+    --display-border: #4a4a4a;
+
+    /* Buttons stay original color */
+    --button-primary: #ffaaa5;
+    --button-secondary: #ffd3b6;
+    --button-tertiary: #dda15e;
+    --button-shadow: #d97a75;
+    --button-text: #4a3428;
+}
+
+[data-theme="dark"] .brand-name,
+[data-theme="dark"] .label {
+    color: #cccccc;
+    /* Light gray text for branding and labels in dark mode */
+}
+
+/* Override dark mode text color if a custom (light) color is selected */
+body.custom-color .brand-name,
+body.custom-color .label {
+    color: var(--display-text) !important;
+}
+
+/* Modern Mode (No Scanlines, Smooth) */
+[data-display="modern"] .scanlines {
+    display: none;
+}
+
+[data-display="modern"] .lcd-display {
+    background: #ffffff;
+    border-color: #eeeeee;
+}
+
+[data-display="modern"] .screen-content {
+    color: #333333;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Press Start 2P', monospace;
+    background-color: var(--page-bg);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    transition: background-color 0.3s ease;
+}
+
+/* Background Circuit Pattern */
+.background-circuit {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}

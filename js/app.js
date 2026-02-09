@@ -7,8 +7,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const infoScreen = document.getElementById('info-screen');
     const rogueBoxScreen = document.getElementById('roguebox-screen');
     const labyrinthScreen = document.getElementById('labyrinth-screen');
+    const drawItScreen = document.getElementById('drawit-screen');
     const screenContent = document.getElementById('screen-content');
-    
+
     const startBtn = document.querySelector('.pill-btn.start');
     const dPadUp = document.querySelector('.d-btn.up');
     const dPadDown = document.querySelector('.d-btn.down');
@@ -16,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dPadRight = document.querySelector('.d-btn.right');
     const aBtn = document.querySelector('.retro-btn.btn-a');
     const bBtn = document.querySelector('.retro-btn.btn-b');
-    
+
     const pressStartText = document.getElementById('press-start-text');
     const logoSpans = document.querySelectorAll('.logo-text span');
     const pressStartSpans = document.querySelectorAll('.press-start span');
@@ -34,6 +35,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lbVictoryOverlay = document.getElementById('lb-victory');
     const lbFinalTimeVal = document.getElementById('lb-final-time-val');
 
+    // DrawIt Elements
+    const diGameArea = document.getElementById('di-game-area');
+    const diTimeEl = document.getElementById('di-time');
+    const diModeEl = document.getElementById('di-mode');
+    const diObjectEl = document.getElementById('di-object-name');
+    const diResultOverlay = document.getElementById('di-result');
+    const diResultMsg = document.getElementById('di-result-msg');
+    const diResultDetails = document.getElementById('di-result-details');
+
     // Settings: Color Picker Elements
     const colorPicker = document.getElementById('color-picker');
     const colorPickerList = document.getElementById('color-picker-list');
@@ -46,13 +56,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         SETTINGS: 'settings',
         INFO: 'info',
         ROGUEBOX: 'roguebox',
-        LABYRINTH: 'labyrinth'
+        LABYRINTH: 'labyrinth',
+        DRAWIT: 'drawit'
     };
 
     let currentScreen = SCREENS.INTRO;
     let isAnimating = false;
     let isColorPickerOpen = false;
-    
+
     const selectionState = {
         [SCREENS.MAIN_MENU]: 0,
         [SCREENS.GAMES]: 0,
@@ -60,31 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         colorPicker: 0
     };
 
-    // RogueBox State
-    const rbState = {
-        isPlaying: false,
-        score: 0,
-        highscore: 0,
-        tileSize: 10,
-        cols: 0,
-        rows: 0,
-        player: { col: 0, row: 0, moveCooldown: 0, moveInterval: 274 },
-        monsterMoveInterval: 288,
-        tapMoveMinInterval: 45,
-        lastTapMoveAt: 0,
-        explosionDelay: 500,
-        explosionRadiusTiles: 1,
-        minSpawnDistanceTiles: 6,
-        coin: null,
-        monsters: [],
-        lastTime: 0,
-        gameTime: 0,
-        monstersEnabledAt: 2000,
-        lastMonsterSpawnAt: 0,
-        monsterSpawnMinInterval: 250,
-        keys: { up: false, down: false, left: false, right: false },
-        animationId: null
-    };
+
 
     // User Settings
     const settings = {
@@ -111,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize
     async function init() {
         await storageManager.init();
-        
+
         // Load settings from DB
         settings.sound = await storageManager.getSetting('sound', settings.sound);
         settings.display = await storageManager.getSetting('display', settings.display);
@@ -129,7 +116,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 finalTimeEl: lbFinalTimeVal
             });
         }
-        
+
+        if (window.rogueBoxGame?.init) {
+            window.rogueBoxGame.init({
+                gameArea: rbGameArea,
+                currentScore: rbCurrentScoreEl,
+                highscore: rbHighscoreEl,
+                gameOverScreen: rbGameOverScreen,
+                finalScoreVal: rbFinalScoreVal
+            });
+        }
+
+        if (window.drawItGame?.init) {
+            window.drawItGame.init({
+                gameAreaEl: diGameArea,
+                timeEl: diTimeEl,
+                modeEl: diModeEl,
+                objectEl: diObjectEl,
+                resultOverlayEl: diResultOverlay,
+                resultMsgEl: diResultMsg,
+                resultDetailsEl: diResultDetails
+            });
+        }
+
         pressStartText.classList.add('blink');
         setupEventListeners();
     }
@@ -137,10 +146,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     function applySettings() {
         // Audio
         audioEngine.setEnabled(settings.sound);
-        
+
         // Display Mode
         document.body.setAttribute('data-display', settings.display);
-        
+
         // Theme (Dark/Light)
         document.body.setAttribute('data-theme', settings.theme);
 
@@ -204,7 +213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.addEventListener('click', initAudio);
         window.addEventListener('keydown', initAudio);
 
-        const isGameScreen = () => currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH;
+        const isGameScreen = () => currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH || currentScreen === SCREENS.DRAWIT;
 
         startBtn.addEventListener('click', () => {
             if (currentScreen === SCREENS.INTRO && !isAnimating) {
@@ -216,6 +225,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 navigateBack(SCREENS.GAMES);
             } else if (currentScreen === SCREENS.LABYRINTH) {
                 stopLabyrinth();
+                setGameMode(false);
+                navigateBack(SCREENS.GAMES);
+            } else if (currentScreen === SCREENS.DRAWIT) {
+                stopDrawIt();
                 setGameMode(false);
                 navigateBack(SCREENS.GAMES);
             }
@@ -231,20 +244,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         dPadUp.addEventListener('click', () => handleDPadClick('up'));
         dPadDown.addEventListener('click', () => handleDPadClick('down'));
-        
+
         // D-Pad Continuous Input (For Game)
         const setKey = (key, value) => {
-            if (currentScreen === SCREENS.ROGUEBOX) rbState.keys[key] = value;
+            if (currentScreen === SCREENS.ROGUEBOX && window.rogueBoxGame?.setKey) window.rogueBoxGame.setKey(key, value);
             if (currentScreen === SCREENS.LABYRINTH && window.labyrinthGame?.setKey) window.labyrinthGame.setKey(key, value);
+            if (currentScreen === SCREENS.DRAWIT && window.drawItGame?.setKey) window.drawItGame.setKey(key, value);
         };
 
         const bindGameControls = (btn, key) => {
             btn.addEventListener('pointerdown', (e) => {
                 e.preventDefault();
                 if (currentScreen === SCREENS.ROGUEBOX) {
-                    const wasDown = rbState.keys[key];
+                    const wasDown = (window.rogueBoxGame) ? window.rogueBoxGame.getState().keys[key] : false;
                     setKey(key, true);
-                    if (!wasDown) onRogueBoxPress(key);
+                    if (!wasDown && window.rogueBoxGame?.handlePress) window.rogueBoxGame.handlePress(key);
                     return;
                 }
                 setKey(key, true);
@@ -257,31 +271,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 setKey(key, false);
             });
             window.addEventListener('keydown', (e) => {
-                if (currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH) {
+                if (currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH || currentScreen === SCREENS.DRAWIT) {
                     if (e.key === 'ArrowUp' && key === 'up') {
-                        const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys.up : false;
+                        const wasDown = (currentScreen === SCREENS.ROGUEBOX && window.rogueBoxGame) ? window.rogueBoxGame.getState().keys.up : false;
                         setKey('up', true);
-                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress('up');
+                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat && window.rogueBoxGame?.handlePress) window.rogueBoxGame.handlePress('up');
                     }
                     if (e.key === 'ArrowDown' && key === 'down') {
-                        const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys.down : false;
+                        const wasDown = (currentScreen === SCREENS.ROGUEBOX && window.rogueBoxGame) ? window.rogueBoxGame.getState().keys.down : false;
                         setKey('down', true);
-                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress('down');
+                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat && window.rogueBoxGame?.handlePress) window.rogueBoxGame.handlePress('down');
                     }
                     if (e.key === 'ArrowLeft' && key === 'left') {
-                        const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys.left : false;
+                        const wasDown = (currentScreen === SCREENS.ROGUEBOX && window.rogueBoxGame) ? window.rogueBoxGame.getState().keys.left : false;
                         setKey('left', true);
-                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress('left');
+                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat && window.rogueBoxGame?.handlePress) window.rogueBoxGame.handlePress('left');
                     }
                     if (e.key === 'ArrowRight' && key === 'right') {
-                        const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys.right : false;
+                        const wasDown = (currentScreen === SCREENS.ROGUEBOX && window.rogueBoxGame) ? window.rogueBoxGame.getState().keys.right : false;
                         setKey('right', true);
-                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress('right');
+                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat && window.rogueBoxGame?.handlePress) window.rogueBoxGame.handlePress('right');
                     }
                 }
             });
             window.addEventListener('keyup', (e) => {
-                if (currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH) {
+                if (currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH || currentScreen === SCREENS.DRAWIT) {
                     if (e.key === 'ArrowUp' && key === 'up') setKey('up', false);
                     if (e.key === 'ArrowDown' && key === 'down') setKey('down', false);
                     if (e.key === 'ArrowLeft' && key === 'left') setKey('left', false);
@@ -335,18 +349,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         window.addEventListener('keydown', (e) => {
-            if (currentScreen !== SCREENS.ROGUEBOX && currentScreen !== SCREENS.LABYRINTH) return;
+            if (currentScreen !== SCREENS.ROGUEBOX && currentScreen !== SCREENS.LABYRINTH && currentScreen !== SCREENS.DRAWIT) return;
             const mapped = mapMovementKey(e.key);
             if (!mapped) return;
             e.preventDefault();
 
-            const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys[mapped] : false;
+            const wasDown = (currentScreen === SCREENS.ROGUEBOX && window.rogueBoxGame) ? window.rogueBoxGame.getState().keys[mapped] : false;
             setKey(mapped, true);
-            if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress(mapped);
+            if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat && window.rogueBoxGame?.handlePress) window.rogueBoxGame.handlePress(mapped);
         }, { passive: false });
 
         window.addEventListener('keyup', (e) => {
-            if (currentScreen !== SCREENS.ROGUEBOX && currentScreen !== SCREENS.LABYRINTH) return;
+            if (currentScreen !== SCREENS.ROGUEBOX && currentScreen !== SCREENS.LABYRINTH && currentScreen !== SCREENS.DRAWIT) return;
             const mapped = mapMovementKey(e.key);
             if (!mapped) return;
             setKey(mapped, false);
@@ -354,11 +368,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         aBtn.addEventListener('click', async () => {
             if (currentScreen === SCREENS.ROGUEBOX) {
-                if (!rbState.isPlaying && !rbGameOverScreen.classList.contains('hidden')) {
+                if (window.rogueBoxGame && !window.rogueBoxGame.getState().isPlaying && !rbGameOverScreen.classList.contains('hidden')) {
                     await restartRogueBox();
                 }
             } else if (currentScreen === SCREENS.LABYRINTH) {
                 window.labyrinthGame?.handleA?.();
+            } else if (currentScreen === SCREENS.DRAWIT) {
+                // A button switches to draw mode or restarts if game over
+                if (window.drawItGame && !window.drawItGame.getState().isPlaying && !diResultOverlay.classList.contains('hidden')) {
+                    await restartDrawIt();
+                } else {
+                    window.drawItGame?.handleA?.();
+                }
             } else {
                 audioEngine.playClickA();
                 handleSelect();
@@ -366,8 +387,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         bBtn.addEventListener('click', () => {
-            audioEngine.playClickB();
-            handleBack();
+            if (currentScreen === SCREENS.DRAWIT && window.drawItGame?.getState().isPlaying) {
+                // B button switches to erase mode during DrawIt
+                window.drawItGame?.handleB?.();
+            } else {
+                audioEngine.playClickB();
+                handleBack();
+            }
         });
     }
 
@@ -419,7 +445,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const currentList = getCurrentListItems();
             const selectedItem = currentList[selectionState[currentScreen]];
             navigateTo(selectedItem.dataset.target);
-        
+
         } else if (currentScreen === SCREENS.SETTINGS) {
             if (isColorPickerOpen) {
                 const items = colorPickerList ? [...colorPickerList.querySelectorAll('.game-item')] : [];
@@ -460,6 +486,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 startRogueBox();
             } else if (gameId === "2") {
                 startLabyrinth();
+            } else if (gameId === "3") {
+                startDrawIt();
             } else {
                 alert(`Starting ${selectedGame.textContent}...`);
             }
@@ -474,320 +502,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function startRogueBox() {
         setGameMode(true);
         navigateTo(SCREENS.ROGUEBOX);
-        await initRogueBox();
-        rbState.isPlaying = true;
-        rbState.lastTime = performance.now();
-        rbState.animationId = requestAnimationFrame(rbGameLoop);
+        if (window.rogueBoxGame?.start) await window.rogueBoxGame.start();
     }
 
     async function restartRogueBox() {
-        await initRogueBox();
-        rbState.isPlaying = true;
-        rbState.lastTime = performance.now();
-        rbState.animationId = requestAnimationFrame(rbGameLoop);
+        if (window.rogueBoxGame?.restart) await window.rogueBoxGame.restart();
     }
 
     function stopRogueBox() {
-        rbState.isPlaying = false;
-        if (rbState.animationId) cancelAnimationFrame(rbState.animationId);
-        rbState.animationId = null;
+        if (window.rogueBoxGame?.stop) window.rogueBoxGame.stop();
     }
 
-    async function initRogueBox() {
-        rbState.highscore = await storageManager.getSetting('rb_highscore', 0);
-
-        rbState.score = 0;
-        rbState.gameTime = 0;
-        rbState.lastTapMoveAt = 0;
-        rbState.lastMonsterSpawnAt = 0;
-
-        rbState.keys.up = false;
-        rbState.keys.down = false;
-        rbState.keys.left = false;
-        rbState.keys.right = false;
-
-        rbState.player.moveCooldown = 0;
-        rbState.monsterMoveInterval = Math.max(20, Math.round(rbState.player.moveInterval * 1.05));
-
-        rbState.coin = null;
-        rbState.monsters = [];
-
-        rbCurrentScoreEl.textContent = '0';
-        rbHighscoreEl.textContent = String(rbState.highscore);
-        rbFinalScoreVal.textContent = '0';
-        rbGameOverScreen.classList.add('hidden');
-
-        rbGameArea.replaceChildren();
-
-        const rect = rbGameArea.getBoundingClientRect();
-        rbState.cols = Math.max(1, Math.floor(rect.width / rbState.tileSize));
-        rbState.rows = Math.max(1, Math.floor(rect.height / rbState.tileSize));
-
-        rbState.player.col = Math.floor(rbState.cols / 2);
-        rbState.player.row = Math.floor(rbState.rows / 2);
-
-        const playerEl = document.createElement('div');
-        playerEl.id = 'rb-player';
-        playerEl.className = 'rb-entity rb-player';
-        rbGameArea.appendChild(playerEl);
-        rbState.player.el = playerEl;
-        positionEntity(playerEl, rbState.player.col, rbState.player.row);
+    async function startDrawIt() {
+        setGameMode(true);
+        navigateTo(SCREENS.DRAWIT);
+        if (window.drawItGame?.start) await window.drawItGame.start();
     }
 
-    function rbGameLoop(timestamp) {
-        if (!rbState.isPlaying) return;
-
-        const dt = timestamp - rbState.lastTime;
-        rbState.lastTime = timestamp;
-        updateRogueBox(dt);
-        rbState.animationId = requestAnimationFrame(rbGameLoop);
+    async function restartDrawIt() {
+        if (window.drawItGame?.restart) await window.drawItGame.restart();
     }
 
-    function updateRogueBox(dt) {
-        rbState.gameTime += dt;
-
-        if (rbState.gameTime >= rbState.monstersEnabledAt) {
-            if (!rbState.coin) spawnCoin();
-        }
-
-        movePlayer(dt);
-        updateMonsters(dt);
-        ensureDesiredMonsters();
-        checkCoinPickup();
+    function stopDrawIt() {
+        if (window.drawItGame?.stop) window.drawItGame.stop();
     }
 
-    function onRogueBoxPress(key) {
-        if (rbState.gameTime < rbState.monstersEnabledAt) return;
-        const now = performance.now();
-        if (now - rbState.lastTapMoveAt < rbState.tapMoveMinInterval) return;
-        rbState.lastTapMoveAt = now;
 
-        const dir = keyToDir(key);
-        if (!dir) return;
-        tryMovePlayer(dir, true);
-    }
-
-    function movePlayer(dt) {
-        rbState.player.moveCooldown -= dt;
-        if (rbState.player.moveCooldown > 0) return;
-
-        const dir = getPlayerDirection();
-        if (!dir) return;
-        tryMovePlayer(dir, false);
-    }
-
-    function tryMovePlayer(dir, force) {
-        if (!force && rbState.player.moveCooldown > 0) return false;
-
-        const nextCol = clamp(rbState.player.col + dir.dc, 0, rbState.cols - 1);
-        const nextRow = clamp(rbState.player.row + dir.dr, 0, rbState.rows - 1);
-        if (nextCol === rbState.player.col && nextRow === rbState.player.row) return false;
-
-        rbState.player.col = nextCol;
-        rbState.player.row = nextRow;
-        positionEntity(rbState.player.el, rbState.player.col, rbState.player.row);
-        rbState.player.moveCooldown = rbState.player.moveInterval;
-        return true;
-    }
-
-    function keyToDir(key) {
-        if (key === 'up') return { dc: 0, dr: -1 };
-        if (key === 'down') return { dc: 0, dr: 1 };
-        if (key === 'left') return { dc: -1, dr: 0 };
-        if (key === 'right') return { dc: 1, dr: 0 };
-        return null;
-    }
-
-    function getPlayerDirection() {
-        if (rbState.keys.up) return { dc: 0, dr: -1 };
-        if (rbState.keys.down) return { dc: 0, dr: 1 };
-        if (rbState.keys.left) return { dc: -1, dr: 0 };
-        if (rbState.keys.right) return { dc: 1, dr: 0 };
-        return null;
-    }
-
-    function getDesiredMonsterCount() {
-        return 1 + Math.floor(rbState.score / 5);
-    }
-
-    function ensureDesiredMonsters() {
-        if (rbState.gameTime < rbState.monstersEnabledAt) return;
-
-        const desired = getDesiredMonsterCount();
-        if (rbState.monsters.length >= desired) return;
-
-        const now = performance.now();
-        if (now - rbState.lastMonsterSpawnAt < rbState.monsterSpawnMinInterval) return;
-
-        const didSpawn = spawnMonster();
-        if (didSpawn) rbState.lastMonsterSpawnAt = now;
-    }
-
-    function spawnCoin() {
-        const spot = findFreeSpot({ avoidCoin: true, avoidMonsters: true, avoidPlayer: true, minDistanceFromPlayer: 0 });
-        if (!spot) return;
-
-        const coinEl = document.createElement('div');
-        coinEl.className = 'rb-entity rb-coin';
-        rbGameArea.appendChild(coinEl);
-        positionEntity(coinEl, spot.col, spot.row);
-        rbState.coin = { col: spot.col, row: spot.row, el: coinEl };
-    }
-
-    function spawnMonster() {
-        const desired = getDesiredMonsterCount();
-        if (rbState.monsters.length >= desired) return false;
-
-        const spot = findFreeSpot({
-            avoidCoin: true,
-            avoidMonsters: true,
-            avoidPlayer: false,
-            minDistanceFromPlayer: rbState.minSpawnDistanceTiles
-        });
-        if (!spot) return false;
-
-        const monsterEl = document.createElement('div');
-        monsterEl.className = 'rb-entity rb-monster';
-        rbGameArea.appendChild(monsterEl);
-        positionEntity(monsterEl, spot.col, spot.row);
-
-        rbState.monsters.push({
-            id: Date.now() + Math.random(),
-            col: spot.col,
-            row: spot.row,
-            state: 'chasing',
-            timer: 0,
-            moveCooldown: 0,
-            el: monsterEl,
-            dead: false
-        });
-        return true;
-    }
-
-    function updateMonsters(dt) {
-        const pCol = rbState.player.col;
-        const pRow = rbState.player.row;
-
-        for (const m of rbState.monsters) {
-            if (m.dead) continue;
-
-            if (m.state === 'chasing') {
-                if (tileDistance(pCol, pRow, m.col, m.row) <= 1) {
-                    m.state = 'arming';
-                    m.timer = rbState.explosionDelay;
-                    m.el.classList.add('preparing');
-                    continue;
-                }
-
-                m.moveCooldown -= dt;
-                if (m.moveCooldown > 0) continue;
-                m.moveCooldown = rbState.monsterMoveInterval;
-
-                const step = getMonsterStep(pCol, pRow, m.col, m.row);
-                const nextCol = clamp(m.col + step.dc, 0, rbState.cols - 1);
-                const nextRow = clamp(m.row + step.dr, 0, rbState.rows - 1);
-
-                if (nextCol === pCol && nextRow === pRow) continue;
-
-                m.col = nextCol;
-                m.row = nextRow;
-                positionEntity(m.el, m.col, m.row);
-            } else if (m.state === 'arming') {
-                m.timer -= dt;
-                if (m.timer <= 0) explodeMonster(m);
-            }
-        }
-
-        rbState.monsters = rbState.monsters.filter(m => !m.dead);
-    }
-
-    function getMonsterStep(pCol, pRow, mCol, mRow) {
-        const dx = pCol - mCol;
-        const dy = pRow - mRow;
-
-        if (Math.abs(dx) > Math.abs(dy)) return { dc: Math.sign(dx), dr: 0 };
-        if (Math.abs(dy) > 0) return { dc: 0, dr: Math.sign(dy) };
-        return { dc: 0, dr: 0 };
-    }
-
-    function explodeMonster(m) {
-        m.el.classList.remove('preparing');
-
-        const r = rbState.explosionRadiusTiles;
-        const size = (r * 2 + 1) * rbState.tileSize;
-
-        const expEl = document.createElement('div');
-        expEl.className = 'rb-explosion';
-        expEl.style.left = `${(m.col - r) * rbState.tileSize}px`;
-        expEl.style.top = `${(m.row - r) * rbState.tileSize}px`;
-        expEl.style.width = `${size}px`;
-        expEl.style.height = `${size}px`;
-        rbGameArea.appendChild(expEl);
-
-        if (tileDistance(rbState.player.col, rbState.player.row, m.col, m.row) <= r) gameOver();
-
-        m.el.remove();
-        m.dead = true;
-
-        setTimeout(() => expEl.remove(), 400);
-    }
-
-    function checkCoinPickup() {
-        if (!rbState.coin) return;
-        if (rbState.player.col !== rbState.coin.col || rbState.player.row !== rbState.coin.row) return;
-
-        rbState.score += 1;
-        rbCurrentScoreEl.textContent = String(rbState.score);
-        ensureDesiredMonsters();
-
-        rbState.coin.el.remove();
-        rbState.coin = null;
-        spawnCoin();
-    }
-
-    function gameOver() {
-        stopRogueBox();
-
-        if (rbState.score > rbState.highscore) {
-            rbState.highscore = rbState.score;
-            rbHighscoreEl.textContent = String(rbState.highscore);
-            storageManager.setSetting('rb_highscore', rbState.highscore);
-        }
-
-        rbFinalScoreVal.textContent = String(rbState.score);
-        rbGameOverScreen.classList.remove('hidden');
-    }
-
-    function findFreeSpot({ avoidCoin, avoidMonsters, avoidPlayer, minDistanceFromPlayer }) {
-        for (let tries = 0; tries < 300; tries++) {
-            const col = Math.floor(Math.random() * rbState.cols);
-            const row = Math.floor(Math.random() * rbState.rows);
-
-            if (avoidPlayer && col === rbState.player.col && row === rbState.player.row) continue;
-
-            if (minDistanceFromPlayer > 0 && tileDistance(rbState.player.col, rbState.player.row, col, row) < minDistanceFromPlayer) continue;
-
-            if (avoidCoin && rbState.coin && col === rbState.coin.col && row === rbState.coin.row) continue;
-
-            if (avoidMonsters && rbState.monsters.some(m => !m.dead && m.col === col && m.row === row)) continue;
-
-            return { col, row };
-        }
-        return null;
-    }
-
-    function positionEntity(el, col, row) {
-        el.style.left = `${col * rbState.tileSize}px`;
-        el.style.top = `${row * rbState.tileSize}px`;
-    }
-
-    function tileDistance(aCol, aRow, bCol, bRow) {
-        return Math.max(Math.abs(aCol - bCol), Math.abs(aRow - bRow));
-    }
-
-    function clamp(value, min, max) {
-        return Math.min(max, Math.max(min, value));
-    }
 
     function handleBack() {
         if (isAnimating) return;
@@ -807,6 +547,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             navigateBack(SCREENS.GAMES);
             return;
         }
+        if (currentScreen === SCREENS.DRAWIT) {
+            stopDrawIt();
+            setGameMode(false);
+            navigateBack(SCREENS.GAMES);
+            return;
+        }
         if (currentScreen !== SCREENS.INTRO && currentScreen !== SCREENS.MAIN_MENU) {
             navigateBack(SCREENS.MAIN_MENU);
         }
@@ -817,15 +563,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentEl = getScreenElement(currentScreen);
         const nextEl = getScreenElement(resolvedTarget);
         if (currentScreen === SCREENS.SETTINGS && isColorPickerOpen) closeColorPicker();
-        const leavingGame = currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH;
-        const enteringGame = resolvedTarget === SCREENS.ROGUEBOX || resolvedTarget === SCREENS.LABYRINTH;
+        const leavingGame = currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH || currentScreen === SCREENS.DRAWIT;
+        const enteringGame = resolvedTarget === SCREENS.ROGUEBOX || resolvedTarget === SCREENS.LABYRINTH || resolvedTarget === SCREENS.DRAWIT;
         if (leavingGame && !enteringGame) setGameMode(false);
         if (enteringGame) setGameMode(true);
 
         currentEl.classList.add('hidden');
         nextEl.classList.remove('hidden');
         nextEl.classList.remove('slide-down', 'slide-in-right');
-        void nextEl.offsetWidth; 
+        void nextEl.offsetWidth;
         nextEl.classList.add('slide-in-right');
         currentScreen = resolvedTarget;
     }
@@ -834,14 +580,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentEl = getScreenElement(currentScreen);
         const nextEl = getScreenElement(targetScreen);
         if (currentScreen === SCREENS.SETTINGS && isColorPickerOpen) closeColorPicker();
-        const leavingGame = currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH;
-        const enteringGame = targetScreen === SCREENS.ROGUEBOX || targetScreen === SCREENS.LABYRINTH;
+        const leavingGame = currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH || currentScreen === SCREENS.DRAWIT;
+        const enteringGame = targetScreen === SCREENS.ROGUEBOX || targetScreen === SCREENS.LABYRINTH || targetScreen === SCREENS.DRAWIT;
         if (leavingGame && !enteringGame) setGameMode(false);
 
         currentEl.classList.add('hidden');
         nextEl.classList.remove('hidden');
         nextEl.classList.remove('slide-down', 'slide-in-right');
-        void nextEl.offsetWidth; 
+        void nextEl.offsetWidth;
         nextEl.classList.add('slide-down');
         currentScreen = targetScreen;
     }
@@ -855,6 +601,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             case SCREENS.INFO: return infoScreen;
             case SCREENS.ROGUEBOX: return rogueBoxScreen;
             case SCREENS.LABYRINTH: return labyrinthScreen;
+            case SCREENS.DRAWIT: return drawItScreen;
             default: return null;
         }
     }
@@ -917,7 +664,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             mainMenu.classList.remove('hidden');
             mainMenu.classList.add('slide-down');
             currentScreen = SCREENS.MAIN_MENU;
-        }, 2000); 
+        }, 2000);
     }
 
     function shuffleArray(array) {
