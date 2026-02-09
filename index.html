@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#a8e6cf">
+    <meta name="description" content="Centro - Retro Digital Gaming Console">
+    <title>Centro Console</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+    <!-- Background Circuit Pattern -->
+    <div class="background-circuit">
+        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <pattern id="circuit-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+                    <path d="M10,10 L90,10 L90,90 L10,90 Z" fill="none" stroke="#5d8a66" stroke-width="1" opacity="0.3"/>
+                    <circle cx="20" cy="20" r="3" fill="#dda15e" opacity="0.4"/>
+                    <circle cx="80" cy="80" r="3" fill="#dda15e" opacity="0.4"/>
+                    <path d="M20,20 Q50,50 80,80" stroke="#5d8a66" stroke-width="2" fill="none" opacity="0.3"/>
+                    <rect x="40" y="40" width="20" height="20" fill="#5d8a66" opacity="0.2"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#circuit-pattern)"/>
+        </svg>
+    </div>
+
+    <!-- Main Console Container -->
+    <main class="console-container">
+        
+        <!-- Console Body -->
+        <div class="console-body glass-panel">
+            
+            <!-- Top Section: Screen -->
+            <div class="screen-container">
+                <div class="screen-bezel">
+                    <div class="battery-led"></div>
+                    <div class="screen-text">DOT MATRIX WITH STEREO SOUND</div>
+                </div>
+                <div class="lcd-display">
+                    <div class="scanlines"></div>
+                    <div id="screen-content" class="screen-content">
+                        <!-- Content will be injected by JS -->
+                        <div id="intro-screen" class="intro-screen">
+                            <div class="intro-text-wrapper">
+                                <h1 class="logo-text" id="logo-text">
+                                    <span>C</span><span>E</span><span>N</span><span>T</span><span>R</span><span>O</span>
+                                </h1>
+                                <p class="press-start blink" id="press-start-text">
+                                    <span>P</span><span>R</span><span>E</span><span>S</span><span>S</span>&nbsp;<span>S</span><span>T</span><span>A</span><span>R</span><span>T</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Main Menu -->
+                        <div id="main-menu" class="menu-screen hidden">
+                            <h2 class="menu-title">Hauptmenü</h2>
+                            <div class="menu-list" id="main-menu-list">
+                                <div class="game-item active" data-target="games">Spiele</div>
+                                <div class="game-item" data-target="settings">Einstellungen</div>
+                                <div class="game-item" data-target="info">Info</div>
+                            </div>
+                        </div>
+
+                        <!-- Games Screen -->
+                        <div id="games-screen" class="menu-screen hidden">
+                            <h2 class="menu-title">Spieleauswahl</h2>
+                            <div class="game-list" id="game-list">
+                                <div class="game-item active" data-id="1">GAME 1</div>
+                                <div class="game-item" data-id="2">GAME 2</div>
+                                <div class="game-item" data-id="3">GAME 3</div>
+                                <div class="game-item" data-id="4">GAME 4</div>
+                                <div class="game-item" data-id="5">GAME 5</div>
+                                <div class="game-item" data-id="6">GAME 6</div>
+                                <div class="game-item" data-id="7">GAME 7</div>
+                                <div class="game-item" data-id="8">GAME 8</div>
+                                <div class="game-item" data-id="9">GAME 9</div>
+                                <div class="game-item" data-id="10">GAME 10</div>
+                            </div>
+                        </div>
+
+                        <!-- Settings Screen -->
+                        <div id="settings-screen" class="menu-screen hidden">
+                            <h2 class="menu-title">Einstellungen</h2>
+                            <div class="menu-list" id="settings-list">
+                                <div class="game-item active" data-setting="sound">Ton: AN</div>
+                                <div class="game-item" data-setting="display">Display: Retro</div>
+                                <div class="game-item" data-setting="theme">Mode: Light</div>
+                            </div>
+                        </div>
+
+                        <!-- Info Screen -->
+                        <div id="info-screen" class="menu-screen hidden">
+                            <h2 class="menu-title">Info</h2>
+                            <div class="info-content">
+                                <div class="info-box">
+                                    <p>Programmiert von</p>
+                                    <p class="highlight">Benjamin</p>
+                                    <p class="highlight">&</p>
+                                    <p class="highlight">David</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branding and Start Button Container -->
+            <div class="middle-section">
+                <div class="brand-name">Centro</div>
+                <div class="function-buttons">
+                    <div class="pill-btn-wrapper">
+                        <button class="pill-btn start" aria-label="Start"></button>
+                        <span class="label">START</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="controls-area">
+                
+                <!-- D-Pad -->
+                <div class="d-pad-container">
+                    <div class="d-pad">
+                        <button class="d-btn up" aria-label="Up"></button>
+                        <button class="d-btn right" aria-label="Right"></button>
+                        <button class="d-btn down" aria-label="Down"></button>
+                        <button class="d-btn left" aria-label="Left"></button>
+                        <div class="d-center"></div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <div class="btn-group">
+                        <button class="retro-btn btn-b" aria-label="B Button">B</button>
+                        <button class="retro-btn btn-a" aria-label="A Button">A</button>
+                    </div>
+                </div>
+
+                <!-- Speaker Grill -->
+                <div class="speaker-grill">
+                    <div class="grill-line"></div>
+                    <div class="grill-line"></div>
+                    <div class="grill-line"></div>
+                    <div class="grill-line"></div>
+                    <div class="grill-line"></div>
+                    <div class="grill-line"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/audio-engine.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
