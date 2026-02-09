@@ -78,15 +78,7 @@
                             <h2 class="menu-title">Spieleauswahl</h2>
                             <div class="game-list" id="game-list">
                                 <div class="game-item active" data-id="1">RogueBox</div>
-                                <div class="game-item" data-id="2">GAME 2</div>
-                                <div class="game-item" data-id="3">GAME 3</div>
-                                <div class="game-item" data-id="4">GAME 4</div>
-                                <div class="game-item" data-id="5">GAME 5</div>
-                                <div class="game-item" data-id="6">GAME 6</div>
-                                <div class="game-item" data-id="7">GAME 7</div>
-                                <div class="game-item" data-id="8">GAME 8</div>
-                                <div class="game-item" data-id="9">GAME 9</div>
-                                <div class="game-item" data-id="10">GAME 10</div>
+                                <div class="game-item" data-id="2">Labyrinth</div>
                             </div>
                         </div>
 
@@ -97,6 +89,23 @@
                                 <div class="game-item active" data-setting="sound">Ton: AN</div>
                                 <div class="game-item" data-setting="display">Display: Retro</div>
                                 <div class="game-item" data-setting="theme">Mode: Light</div>
+                                <div class="game-item" data-setting="color">Farbe: Standard</div>
+                            </div>
+                            <div id="color-picker" class="color-picker hidden" aria-label="Farbmenü">
+                                <div class="color-picker-title">Farbe</div>
+                                <div id="color-picker-list" class="color-list">
+                                    <div class="game-item color-item active" data-color="standard"><span class="color-swatch"></span>Standard</div>
+                                    <div class="game-item color-item" data-color="blush"><span class="color-swatch"></span>Blush</div>
+                                    <div class="game-item color-item" data-color="mint"><span class="color-swatch"></span>Mint</div>
+                                    <div class="game-item color-item" data-color="lavender"><span class="color-swatch"></span>Lavendel</div>
+                                    <div class="game-item color-item" data-color="babyblue"><span class="color-swatch"></span>Babyblau</div>
+                                    <div class="game-item color-item" data-color="butteryellow"><span class="color-swatch"></span>Buttergelb</div>
+                                    <div class="game-item color-item" data-color="peach"><span class="color-swatch"></span>Pfirsich</div>
+                                    <div class="game-item color-item" data-color="mauve"><span class="color-swatch"></span>Mauve</div>
+                                    <div class="game-item color-item" data-color="vanilla"><span class="color-swatch"></span>Vanille</div>
+                                    <div class="game-item color-item" data-color="denim"><span class="color-swatch"></span>Denim</div>
+                                    <div class="game-item color-item" data-color="mistlavender"><span class="color-swatch"></span>Nebel</div>
+                                </div>
                             </div>
                         </div>
 
@@ -109,6 +118,8 @@
                                     <p class="highlight">Benjamin</p>
                                     <p class="highlight">&</p>
                                     <p class="highlight">David</p>
+                                    <p style="margin-top: 10px;">Version</p>
+                                    <p class="highlight">2.0 Beta</p>
                                 </div>
                             </div>
                         </div>
@@ -126,6 +137,19 @@
                                 <div class="rb-msg">GAME OVER</div>
                                 <div class="rb-final-score">SCORE: <span id="rb-final-score-val">0</span></div>
                                 <div class="rb-restart-msg">PRESS A TO RESTART</div>
+                            </div>
+                        </div>
+
+                        <!-- Labyrinth Game Screen -->
+                        <div id="labyrinth-screen" class="game-screen hidden">
+                            <div class="lb-header">
+                                <div class="lb-timer">TIME: <span id="lb-time">00:00</span></div>
+                            </div>
+                            <div id="lb-game-area" class="lb-game-area"></div>
+                            <div id="lb-victory" class="lb-overlay hidden">
+                                <div class="lb-msg">VICTORY</div>
+                                <div class="lb-final-time">TIME: <span id="lb-final-time-val">00:00</span></div>
+                                <div class="lb-restart-msg">PRESS A TO RESTART</div>
                             </div>
                         </div>
                     </div>
@@ -182,6 +206,7 @@
     <!-- Scripts -->
     <script src="js/storage.js"></script>
     <script src="js/audio-engine.js"></script>
+    <script src="js/games/labyrinth.js"></script>
     <script src="js/app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {

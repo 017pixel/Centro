@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const settingsScreen = document.getElementById('settings-screen');
     const infoScreen = document.getElementById('info-screen');
     const rogueBoxScreen = document.getElementById('roguebox-screen');
+    const labyrinthScreen = document.getElementById('labyrinth-screen');
     const screenContent = document.getElementById('screen-content');
     
     const startBtn = document.querySelector('.pill-btn.start');
@@ -27,6 +28,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const rbGameOverScreen = document.getElementById('rb-game-over');
     const rbFinalScoreVal = document.getElementById('rb-final-score-val');
 
+    // Labyrinth Elements
+    const lbGameArea = document.getElementById('lb-game-area');
+    const lbTimeEl = document.getElementById('lb-time');
+    const lbVictoryOverlay = document.getElementById('lb-victory');
+    const lbFinalTimeVal = document.getElementById('lb-final-time-val');
+
+    // Settings: Color Picker Elements
+    const colorPicker = document.getElementById('color-picker');
+    const colorPickerList = document.getElementById('color-picker-list');
+
     // State
     const SCREENS = {
         INTRO: 'intro',
@@ -34,16 +45,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         GAMES: 'games',
         SETTINGS: 'settings',
         INFO: 'info',
-        ROGUEBOX: 'roguebox'
+        ROGUEBOX: 'roguebox',
+        LABYRINTH: 'labyrinth'
     };
 
     let currentScreen = SCREENS.INTRO;
     let isAnimating = false;
+    let isColorPickerOpen = false;
     
     const selectionState = {
         [SCREENS.MAIN_MENU]: 0,
         [SCREENS.GAMES]: 0,
-        [SCREENS.SETTINGS]: 0
+        [SCREENS.SETTINGS]: 0,
+        colorPicker: 0
     };
 
     // RogueBox State
@@ -56,6 +70,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         rows: 0,
         player: { col: 0, row: 0, moveCooldown: 0, moveInterval: 274 },
         monsterMoveInterval: 288,
+        tapMoveMinInterval: 45,
+        lastTapMoveAt: 0,
         explosionDelay: 500,
         explosionRadiusTiles: 1,
         minSpawnDistanceTiles: 6,
@@ -63,9 +79,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         monsters: [],
         lastTime: 0,
         gameTime: 0,
-        nextMonsterSpawnAt: 0,
-        monsterSpawnInterval: 8000,
-        difficultyTimer: 0,
+        monstersEnabledAt: 2000,
+        lastMonsterSpawnAt: 0,
+        monsterSpawnMinInterval: 250,
         keys: { up: false, down: false, left: false, right: false },
         animationId: null
     };
@@ -74,8 +90,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const settings = {
         sound: true,
         display: 'retro',
-        theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+        consoleColor: null
     };
+
+    const CONSOLE_COLORS = [
+        { id: 'standard', label: 'Standard', value: null },
+        { id: 'blush', label: 'Blush', value: 'rgba(247, 183, 215, 0.9)' },
+        { id: 'mint', label: 'Mint', value: 'rgba(168, 230, 207, 0.9)' },
+        { id: 'lavender', label: 'Lavendel', value: 'rgba(201, 160, 220, 0.9)' },
+        { id: 'babyblue', label: 'Babyblau', value: 'rgba(178, 223, 252, 0.9)' },
+        { id: 'butteryellow', label: 'Buttergelb', value: 'rgba(255, 255, 204, 0.9)' },
+        { id: 'peach', label: 'Pfirsich', value: 'rgba(255, 211, 182, 0.9)' },
+        { id: 'mauve', label: 'Mauve', value: 'rgba(192, 164, 180, 0.9)' },
+        { id: 'vanilla', label: 'Vanille', value: 'rgba(255, 246, 200, 0.9)' },
+        { id: 'denim', label: 'Denim', value: 'rgba(164, 192, 230, 0.9)' },
+        { id: 'mistlavender', label: 'Nebel', value: 'rgba(230, 224, 255, 0.9)' }
+    ];
 
     // Initialize
     async function init() {
@@ -85,8 +116,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         settings.sound = await storageManager.getSetting('sound', settings.sound);
         settings.display = await storageManager.getSetting('display', settings.display);
         settings.theme = await storageManager.getSetting('theme', settings.theme);
+        settings.consoleColor = await storageManager.getSetting('consoleColor', settings.consoleColor);
 
         applySettings();
+
+        if (window.labyrinthGame?.init) {
+            window.labyrinthGame.init({
+                screenEl: labyrinthScreen,
+                gameAreaEl: lbGameArea,
+                timeEl: lbTimeEl,
+                victoryOverlayEl: lbVictoryOverlay,
+                finalTimeEl: lbFinalTimeVal
+            });
+        }
         
         pressStartText.classList.add('blink');
         setupEventListeners();
@@ -102,18 +144,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Theme (Dark/Light)
         document.body.setAttribute('data-theme', settings.theme);
 
+        applyConsoleColor();
+
         // Update UI text in settings menu
         updateSettingsUI();
+    }
+
+    function applyConsoleColor() {
+        const selected = CONSOLE_COLORS.find(c => c.id === (settings.consoleColor || 'standard'));
+        if (!selected || !selected.value) {
+            document.documentElement.style.removeProperty('--console-bg');
+            document.body.classList.remove('custom-color');
+            return;
+        }
+        document.documentElement.style.setProperty('--console-bg', selected.value);
+        document.body.classList.add('custom-color');
     }
 
     function updateSettingsUI() {
         const soundItem = document.querySelector('[data-setting="sound"]');
         const displayItem = document.querySelector('[data-setting="display"]');
         const themeItem = document.querySelector('[data-setting="theme"]');
+        const colorItem = document.querySelector('[data-setting="color"]');
 
         if (soundItem) soundItem.textContent = `Ton: ${settings.sound ? 'AN' : 'AUS'}`;
         if (displayItem) displayItem.textContent = `Display: ${settings.display === 'retro' ? 'Retro' : 'Modern'}`;
         if (themeItem) themeItem.textContent = `Mode: ${settings.theme === 'light' ? 'Light' : 'Dark'}`;
+        if (colorItem) {
+            const label = CONSOLE_COLORS.find(c => c.id === (settings.consoleColor || 'standard'))?.label || 'Standard';
+            colorItem.textContent = `Farbe: ${label}`;
+        }
+
+        if (colorPickerList) {
+            const items = colorPickerList.querySelectorAll('.color-item');
+            for (const el of items) {
+                const id = el.dataset.color;
+                const col = CONSOLE_COLORS.find(c => c.id === id);
+                const swatch = el.querySelector('.color-swatch');
+                if (swatch && col) {
+                    if (col.id === 'standard') {
+                        // Use current theme's default for standard swatch
+                        swatch.style.setProperty('--swatch', settings.theme === 'dark' ? 'rgba(44, 44, 44, 0.85)' : 'rgba(224, 221, 209, 0.9)');
+                    } else {
+                        swatch.style.setProperty('--swatch', col.value);
+                    }
+                }
+            }
+        }
     }
 
     function setupEventListeners() {
@@ -127,20 +204,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.addEventListener('click', initAudio);
         window.addEventListener('keydown', initAudio);
 
+        const isGameScreen = () => currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH;
+
         startBtn.addEventListener('click', () => {
             if (currentScreen === SCREENS.INTRO && !isAnimating) {
                 audioEngine.playClickMenu();
                 startIntroAnimation();
             } else if (currentScreen === SCREENS.ROGUEBOX) {
                 stopRogueBox();
-                setRogueBoxMode(false);
+                setGameMode(false);
+                navigateBack(SCREENS.GAMES);
+            } else if (currentScreen === SCREENS.LABYRINTH) {
+                stopLabyrinth();
+                setGameMode(false);
                 navigateBack(SCREENS.GAMES);
             }
         });
 
         // D-Pad Navigation (Click for menus)
         const handleDPadClick = (direction) => {
-            if (currentScreen !== SCREENS.ROGUEBOX) {
+            if (currentScreen !== SCREENS.ROGUEBOX && currentScreen !== SCREENS.LABYRINTH) {
                 audioEngine.playClickNav();
                 handleNavigation(direction);
             }
@@ -151,14 +234,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // D-Pad Continuous Input (For Game)
         const setKey = (key, value) => {
-            if (currentScreen === SCREENS.ROGUEBOX) {
-                rbState.keys[key] = value;
-            }
+            if (currentScreen === SCREENS.ROGUEBOX) rbState.keys[key] = value;
+            if (currentScreen === SCREENS.LABYRINTH && window.labyrinthGame?.setKey) window.labyrinthGame.setKey(key, value);
         };
 
         const bindGameControls = (btn, key) => {
             btn.addEventListener('pointerdown', (e) => {
                 e.preventDefault();
+                if (currentScreen === SCREENS.ROGUEBOX) {
+                    const wasDown = rbState.keys[key];
+                    setKey(key, true);
+                    if (!wasDown) onRogueBoxPress(key);
+                    return;
+                }
                 setKey(key, true);
             });
             btn.addEventListener('pointerup', (e) => {
@@ -169,15 +257,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 setKey(key, false);
             });
             window.addEventListener('keydown', (e) => {
-                if (currentScreen === SCREENS.ROGUEBOX) {
-                    if (e.key === 'ArrowUp' && key === 'up') setKey('up', true);
-                    if (e.key === 'ArrowDown' && key === 'down') setKey('down', true);
-                    if (e.key === 'ArrowLeft' && key === 'left') setKey('left', true);
-                    if (e.key === 'ArrowRight' && key === 'right') setKey('right', true);
+                if (currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH) {
+                    if (e.key === 'ArrowUp' && key === 'up') {
+                        const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys.up : false;
+                        setKey('up', true);
+                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress('up');
+                    }
+                    if (e.key === 'ArrowDown' && key === 'down') {
+                        const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys.down : false;
+                        setKey('down', true);
+                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress('down');
+                    }
+                    if (e.key === 'ArrowLeft' && key === 'left') {
+                        const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys.left : false;
+                        setKey('left', true);
+                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress('left');
+                    }
+                    if (e.key === 'ArrowRight' && key === 'right') {
+                        const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys.right : false;
+                        setKey('right', true);
+                        if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress('right');
+                    }
                 }
             });
             window.addEventListener('keyup', (e) => {
-                if (currentScreen === SCREENS.ROGUEBOX) {
+                if (currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH) {
                     if (e.key === 'ArrowUp' && key === 'up') setKey('up', false);
                     if (e.key === 'ArrowDown' && key === 'down') setKey('down', false);
                     if (e.key === 'ArrowLeft' && key === 'left') setKey('left', false);
@@ -191,11 +295,70 @@ document.addEventListener('DOMContentLoaded', async () => {
         bindGameControls(dPadLeft, 'left');
         bindGameControls(dPadRight, 'right');
 
+        window.addEventListener('keydown', async (e) => {
+            if (isAnimating) return;
+            if (isGameScreen()) return;
+
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                audioEngine.playClickNav();
+                handleNavigation('up');
+                return;
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                audioEngine.playClickNav();
+                handleNavigation('down');
+                return;
+            }
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                audioEngine.playClickA();
+                await handleSelect();
+                return;
+            }
+            if (e.key === 'Escape' || e.key === 'Backspace') {
+                e.preventDefault();
+                audioEngine.playClickB();
+                handleBack();
+                return;
+            }
+        }, { passive: false });
+
+        const mapMovementKey = (key) => {
+            const k = String(key).toLowerCase();
+            if (k === 'w') return 'up';
+            if (k === 's') return 'down';
+            if (k === 'a') return 'left';
+            if (k === 'd') return 'right';
+            return null;
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (currentScreen !== SCREENS.ROGUEBOX && currentScreen !== SCREENS.LABYRINTH) return;
+            const mapped = mapMovementKey(e.key);
+            if (!mapped) return;
+            e.preventDefault();
+
+            const wasDown = currentScreen === SCREENS.ROGUEBOX ? rbState.keys[mapped] : false;
+            setKey(mapped, true);
+            if (currentScreen === SCREENS.ROGUEBOX && !wasDown && !e.repeat) onRogueBoxPress(mapped);
+        }, { passive: false });
+
+        window.addEventListener('keyup', (e) => {
+            if (currentScreen !== SCREENS.ROGUEBOX && currentScreen !== SCREENS.LABYRINTH) return;
+            const mapped = mapMovementKey(e.key);
+            if (!mapped) return;
+            setKey(mapped, false);
+        });
+
         aBtn.addEventListener('click', async () => {
             if (currentScreen === SCREENS.ROGUEBOX) {
                 if (!rbState.isPlaying && !rbGameOverScreen.classList.contains('hidden')) {
                     await restartRogueBox();
                 }
+            } else if (currentScreen === SCREENS.LABYRINTH) {
+                window.labyrinthGame?.handleA?.();
             } else {
                 audioEngine.playClickA();
                 handleSelect();
@@ -210,6 +373,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function handleNavigation(direction) {
         if (isAnimating || currentScreen === SCREENS.INTRO || currentScreen === SCREENS.INFO) return;
+
+        if (currentScreen === SCREENS.SETTINGS && isColorPickerOpen) {
+            const items = colorPickerList ? [...colorPickerList.querySelectorAll('.game-item')] : [];
+            if (items.length === 0) return;
+
+            let index = selectionState.colorPicker;
+            items[index]?.classList.remove('active');
+
+            if (direction === 'up') {
+                index = (index > 0) ? index - 1 : items.length - 1;
+            } else {
+                index = (index < items.length - 1) ? index + 1 : 0;
+            }
+
+            selectionState.colorPicker = index;
+            const selected = items[index];
+            selected.classList.add('active');
+            selected.scrollIntoView({ block: 'center', behavior: 'auto' });
+            return;
+        }
 
         const currentList = getCurrentListItems();
         if (!currentList || currentList.length === 0) return;
@@ -238,6 +421,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             navigateTo(selectedItem.dataset.target);
         
         } else if (currentScreen === SCREENS.SETTINGS) {
+            if (isColorPickerOpen) {
+                const items = colorPickerList ? [...colorPickerList.querySelectorAll('.game-item')] : [];
+                const selected = items[selectionState.colorPicker];
+                if (!selected) return;
+
+                settings.consoleColor = selected.dataset.color || null;
+                await storageManager.setSetting('consoleColor', settings.consoleColor);
+                applySettings();
+                return;
+            }
+
             const currentList = getCurrentListItems();
             const selectedItem = currentList[selectionState[currentScreen]];
             const settingType = selectedItem.dataset.setting;
@@ -251,6 +445,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (settingType === 'theme') {
                 settings.theme = settings.theme === 'light' ? 'dark' : 'light';
                 await storageManager.setSetting('theme', settings.theme);
+            } else if (settingType === 'color') {
+                openColorPicker();
+                return;
             }
             applySettings();
 
@@ -261,19 +458,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (gameId === "1") {
                 startRogueBox();
+            } else if (gameId === "2") {
+                startLabyrinth();
             } else {
                 alert(`Starting ${selectedGame.textContent}...`);
             }
         }
     }
 
-    function setRogueBoxMode(enabled) {
+    function setGameMode(enabled) {
         if (enabled) screenContent.classList.add('no-padding');
         else screenContent.classList.remove('no-padding');
     }
 
     async function startRogueBox() {
-        setRogueBoxMode(true);
+        setGameMode(true);
         navigateTo(SCREENS.ROGUEBOX);
         await initRogueBox();
         rbState.isPlaying = true;
@@ -299,9 +498,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         rbState.score = 0;
         rbState.gameTime = 0;
-        rbState.difficultyTimer = 0;
-        rbState.nextMonsterSpawnAt = 0;
-        rbState.monsterSpawnInterval = 8000;
+        rbState.lastTapMoveAt = 0;
+        rbState.lastMonsterSpawnAt = 0;
 
         rbState.keys.up = false;
         rbState.keys.down = false;
@@ -347,28 +545,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function updateRogueBox(dt) {
         rbState.gameTime += dt;
-        rbState.difficultyTimer += dt;
 
-        if (rbState.difficultyTimer >= 20000) {
-            rbState.difficultyTimer = 0;
-            if (rbState.monsterSpawnInterval > 2000) rbState.monsterSpawnInterval -= 1000;
-        }
-
-        if (rbState.gameTime >= 2000) {
+        if (rbState.gameTime >= rbState.monstersEnabledAt) {
             if (!rbState.coin) spawnCoin();
-
-            if (rbState.nextMonsterSpawnAt === 0) {
-                spawnMonster();
-                rbState.nextMonsterSpawnAt = rbState.gameTime + rbState.monsterSpawnInterval;
-            } else if (rbState.gameTime >= rbState.nextMonsterSpawnAt) {
-                spawnMonster();
-                rbState.nextMonsterSpawnAt = rbState.gameTime + rbState.monsterSpawnInterval;
-            }
         }
 
         movePlayer(dt);
         updateMonsters(dt);
+        ensureDesiredMonsters();
         checkCoinPickup();
+    }
+
+    function onRogueBoxPress(key) {
+        if (rbState.gameTime < rbState.monstersEnabledAt) return;
+        const now = performance.now();
+        if (now - rbState.lastTapMoveAt < rbState.tapMoveMinInterval) return;
+        rbState.lastTapMoveAt = now;
+
+        const dir = keyToDir(key);
+        if (!dir) return;
+        tryMovePlayer(dir, true);
     }
 
     function movePlayer(dt) {
@@ -377,15 +573,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const dir = getPlayerDirection();
         if (!dir) return;
+        tryMovePlayer(dir, false);
+    }
+
+    function tryMovePlayer(dir, force) {
+        if (!force && rbState.player.moveCooldown > 0) return false;
 
         const nextCol = clamp(rbState.player.col + dir.dc, 0, rbState.cols - 1);
         const nextRow = clamp(rbState.player.row + dir.dr, 0, rbState.rows - 1);
-        if (nextCol === rbState.player.col && nextRow === rbState.player.row) return;
+        if (nextCol === rbState.player.col && nextRow === rbState.player.row) return false;
 
         rbState.player.col = nextCol;
         rbState.player.row = nextRow;
         positionEntity(rbState.player.el, rbState.player.col, rbState.player.row);
         rbState.player.moveCooldown = rbState.player.moveInterval;
+        return true;
+    }
+
+    function keyToDir(key) {
+        if (key === 'up') return { dc: 0, dr: -1 };
+        if (key === 'down') return { dc: 0, dr: 1 };
+        if (key === 'left') return { dc: -1, dr: 0 };
+        if (key === 'right') return { dc: 1, dr: 0 };
+        return null;
     }
 
     function getPlayerDirection() {
@@ -394,6 +604,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (rbState.keys.left) return { dc: -1, dr: 0 };
         if (rbState.keys.right) return { dc: 1, dr: 0 };
         return null;
+    }
+
+    function getDesiredMonsterCount() {
+        return 1 + Math.floor(rbState.score / 5);
+    }
+
+    function ensureDesiredMonsters() {
+        if (rbState.gameTime < rbState.monstersEnabledAt) return;
+
+        const desired = getDesiredMonsterCount();
+        if (rbState.monsters.length >= desired) return;
+
+        const now = performance.now();
+        if (now - rbState.lastMonsterSpawnAt < rbState.monsterSpawnMinInterval) return;
+
+        const didSpawn = spawnMonster();
+        if (didSpawn) rbState.lastMonsterSpawnAt = now;
     }
 
     function spawnCoin() {
@@ -408,13 +635,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function spawnMonster() {
+        const desired = getDesiredMonsterCount();
+        if (rbState.monsters.length >= desired) return false;
+
         const spot = findFreeSpot({
             avoidCoin: true,
             avoidMonsters: true,
             avoidPlayer: false,
             minDistanceFromPlayer: rbState.minSpawnDistanceTiles
         });
-        if (!spot) return;
+        if (!spot) return false;
 
         const monsterEl = document.createElement('div');
         monsterEl.className = 'rb-entity rb-monster';
@@ -431,6 +661,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             el: monsterEl,
             dead: false
         });
+        return true;
     }
 
     function updateMonsters(dt) {
@@ -507,8 +738,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         rbState.score += 1;
         rbCurrentScoreEl.textContent = String(rbState.score);
-
-        if (rbState.score % 5 === 0) spawnMonster();
+        ensureDesiredMonsters();
 
         rbState.coin.el.remove();
         rbState.coin = null;
@@ -561,7 +791,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function handleBack() {
         if (isAnimating) return;
-        if (currentScreen === SCREENS.ROGUEBOX) return;
+        if (currentScreen === SCREENS.SETTINGS && isColorPickerOpen) {
+            closeColorPicker();
+            return;
+        }
+        if (currentScreen === SCREENS.ROGUEBOX) {
+            stopRogueBox();
+            setGameMode(false);
+            navigateBack(SCREENS.GAMES);
+            return;
+        }
+        if (currentScreen === SCREENS.LABYRINTH) {
+            stopLabyrinth();
+            setGameMode(false);
+            navigateBack(SCREENS.GAMES);
+            return;
+        }
         if (currentScreen !== SCREENS.INTRO && currentScreen !== SCREENS.MAIN_MENU) {
             navigateBack(SCREENS.MAIN_MENU);
         }
@@ -571,8 +816,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const resolvedTarget = SCREENS[targetScreen.toUpperCase()] || targetScreen;
         const currentEl = getScreenElement(currentScreen);
         const nextEl = getScreenElement(resolvedTarget);
-        if (currentScreen === SCREENS.ROGUEBOX && resolvedTarget !== SCREENS.ROGUEBOX) setRogueBoxMode(false);
-        if (resolvedTarget === SCREENS.ROGUEBOX) setRogueBoxMode(true);
+        if (currentScreen === SCREENS.SETTINGS && isColorPickerOpen) closeColorPicker();
+        const leavingGame = currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH;
+        const enteringGame = resolvedTarget === SCREENS.ROGUEBOX || resolvedTarget === SCREENS.LABYRINTH;
+        if (leavingGame && !enteringGame) setGameMode(false);
+        if (enteringGame) setGameMode(true);
 
         currentEl.classList.add('hidden');
         nextEl.classList.remove('hidden');
@@ -585,7 +833,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     function navigateBack(targetScreen) {
         const currentEl = getScreenElement(currentScreen);
         const nextEl = getScreenElement(targetScreen);
-        if (currentScreen === SCREENS.ROGUEBOX && targetScreen !== SCREENS.ROGUEBOX) setRogueBoxMode(false);
+        if (currentScreen === SCREENS.SETTINGS && isColorPickerOpen) closeColorPicker();
+        const leavingGame = currentScreen === SCREENS.ROGUEBOX || currentScreen === SCREENS.LABYRINTH;
+        const enteringGame = targetScreen === SCREENS.ROGUEBOX || targetScreen === SCREENS.LABYRINTH;
+        if (leavingGame && !enteringGame) setGameMode(false);
 
         currentEl.classList.add('hidden');
         nextEl.classList.remove('hidden');
@@ -603,8 +854,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             case SCREENS.SETTINGS: return settingsScreen;
             case SCREENS.INFO: return infoScreen;
             case SCREENS.ROGUEBOX: return rogueBoxScreen;
+            case SCREENS.LABYRINTH: return labyrinthScreen;
             default: return null;
         }
+    }
+
+    function startLabyrinth() {
+        setGameMode(true);
+        navigateTo(SCREENS.LABYRINTH);
+        window.labyrinthGame?.start?.();
+    }
+
+    function stopLabyrinth() {
+        window.labyrinthGame?.stop?.();
     }
 
     function getCurrentListItems() {
@@ -612,6 +874,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentScreen === SCREENS.GAMES) return document.querySelectorAll('#game-list .game-item');
         if (currentScreen === SCREENS.SETTINGS) return document.querySelectorAll('#settings-list .game-item');
         return null;
+    }
+
+    function openColorPicker() {
+        if (!colorPicker || !colorPickerList) return;
+        isColorPickerOpen = true;
+        colorPicker.classList.remove('hidden');
+
+        const items = [...colorPickerList.querySelectorAll('.game-item')];
+        for (const el of items) el.classList.remove('active');
+
+        const idx = items.findIndex(el => el.dataset.color === settings.consoleColor);
+        selectionState.colorPicker = idx >= 0 ? idx : 0;
+        const selected = items[selectionState.colorPicker];
+        selected?.classList.add('active');
+        selected?.scrollIntoView({ block: 'center', behavior: 'auto' });
+    }
+
+    function closeColorPicker() {
+        if (!colorPicker || !colorPickerList) return;
+        isColorPickerOpen = false;
+        colorPicker.classList.add('hidden');
     }
 
     function startIntroAnimation() {
