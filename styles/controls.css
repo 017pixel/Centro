@@ -248,14 +248,14 @@
     position: relative;
 }
 
-/* B button hitbox - extends up, left, down but NOT right toward A button */
+/* B button hitbox - reduced to 5px extra margin */
 .btn-b::before {
     content: '';
     position: absolute;
-    top: -25px;
+    top: -5px;
     right: -5px;
-    bottom: -30px;
-    left: -30px;
+    bottom: -5px;
+    left: -5px;
 }
 
 /* Speaker Grill */

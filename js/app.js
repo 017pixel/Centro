@@ -536,9 +536,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         if (currentScreen === SCREENS.ROGUEBOX) {
-            stopRogueBox();
-            setGameMode(false);
-            navigateBack(SCREENS.GAMES);
+            // RogueBox can only be exited via START button
             return;
         }
         if (currentScreen === SCREENS.LABYRINTH) {
