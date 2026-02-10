@@ -173,6 +173,21 @@
     box-shadow: 0 1px 0 #b07d46;
 }
 
+/* Larger hitbox for Start button */
+.pill-btn {
+    position: relative;
+    /* Ensure positioning context for pseudo-element */
+}
+
+.pill-btn::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    left: -30px;
+    right: -30px;
+    bottom: -30px;
+}
+
 .label {
     font-size: 8px;
     color: var(--display-text);
